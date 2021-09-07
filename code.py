@@ -5,24 +5,31 @@ from adafruit_ble.advertising.standard import ProvideServicesAdvertisement
 from adafruit_ble.services.nordic import UARTService
 
 ble = BLERadio()
+ble.name = "Raptor 3"
 
-uart_connection = None
+uart_connections = []
+MAX_CONNECTIONS = 1
 
 while True:
-    ble.name = "Raptor 3"
-    if not uart_connection:
-        print("Trying to connect...")
+    if len(uart_connections) < MAX_CONNECTIONS:
+        print(f"Searching for other devices..., you currently are connected to {uart_connections} devices.")
         for adv in ble.start_scan(ProvideServicesAdvertisement):
             if UARTService in adv.services:
-                uart_connection = ble.connect(adv)
-                print("Connected")
-                break
+                print("Found a new connection, attempting to connect.")
+                try:
+                    uart_connections.append(ble.connect(adv))
+                    print("Connected successfully!")
+               except:
+                    print("Failed to connect.")
         ble.stop_scan()
 
-    if uart_connection and uart_connection.connected:
+    for uart_connection in uart_connections:
+        if not uart_connection.connected:
+           continue
+        
         uart_service = uart_connection[UARTService]
         while uart_connection.connected:
-            s = "Hello World"
+            s = "Hello World\n"
             uart_service.write(s.encode("utf-8"))
-            uart_service.write(b'\n')
+            # uart_service.write(b'\n') this is not needed if you add the \n direclty, I think at least
             print(uart_service.readline().decode("utf-8"))
