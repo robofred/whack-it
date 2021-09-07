@@ -19,7 +19,7 @@ while True:
                 try:
                     uart_connections.append(ble.connect(adv))
                     print("Connected successfully!")
-               except:
+                except:
                     print("Failed to connect.")
         ble.stop_scan()
 
