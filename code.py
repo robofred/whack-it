@@ -1,5 +1,7 @@
 # Connect to an "eval()" service over BLE UART.
 
+# TODO: Fred you should read this: https://circuitpython.readthedocs.io/projects/ble/en/latest/api.html
+
 from adafruit_ble import BLERadio
 from adafruit_ble.advertising.standard import ProvideServicesAdvertisement
 from adafruit_ble.services.nordic import UARTService
@@ -9,27 +11,30 @@ ble.name = "Raptor 3"
 
 uart_connections = []
 MAX_CONNECTIONS = 1
+TIME_TO_SCAN = 10
 
-while True:
-    if len(uart_connections) < MAX_CONNECTIONS:
-        print(f"Searching for other devices..., you currently are connected to {uart_connections} devices.")
-        for adv in ble.start_scan(ProvideServicesAdvertisement):
-            if UARTService in adv.services:
-                print("Found a new connection, attempting to connect.")
-                try:
-                    uart_connections.append(ble.connect(adv))
-                    print("Connected successfully!")
-                except:
-                    print("Failed to connect.")
-        ble.stop_scan()
-
-    for uart_connection in uart_connections:
-        if not uart_connection.connected:
-           continue
-        
+def send_message_to_connections(msg):
+    for uart_connection in ble.connections:        
         uart_service = uart_connection[UARTService]
         while uart_connection.connected:
-            s = "Hello World\n"
-            uart_service.write(s.encode("utf-8"))
-            # uart_service.write(b'\n') this is not needed if you add the \n direclty, I think at least
+            uart_service.write(msg.encode("utf-8"))
             print(uart_service.readline().decode("utf-8"))
+
+while True: 
+    print(f"Searching for other devices..., you currently are connected to {len(ble.connections)} devices.")
+    for adv in ble.start_scan(ProvideServicesAdvertisement, timeout=TIME_TO_SCAN):
+        if adv in ble.connections:
+            continue
+
+        if UARTService in adv.services:
+            print("Found a new connection, attempting to connect.")
+            try:
+                ble.connect(adv)
+                print("Connected successfully!")
+            except:
+                print("Failed to connect.")
+
+    # ble.stop_scan() may or may not need this
+
+    send_message_to_connections(msg)
+
